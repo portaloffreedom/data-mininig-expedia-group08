@@ -11,6 +11,37 @@ parseDateFromString <- function(date_string) {
     return(date)
 }
 
+create_competitors_columns <- function(dataset) {
+    
+    comp_rate_columns <- cbind(
+            dataset$comp1_rate,
+            dataset$comp2_rate,
+            dataset$comp3_rate,
+            dataset$comp4_rate,
+            dataset$comp5_rate,
+            dataset$comp6_rate,
+            dataset$comp7_rate,
+            dataset$comp8_rate
+        )
+    
+    # number of competitors
+    dataset$n_comp <- rowSums   (
+        !is.na(comp_rate_columns)
+    )
+    
+    # number of cheaper competitors
+    dataset$n_comp_cheaper <- rowSums(
+        (comp_rate_columns == -1), na.rm = TRUE
+    )
+    
+    # number of more expensive competitors
+    dataset$n_comp_expensive <- rowSums(
+        (comp_rate_columns == 1), na.rm = TRUE
+    )
+    
+    return(dataset)
+}
+
 loadData <- function(filename = "train_min.csv", minified = TRUE) {
 
   if (minified)
