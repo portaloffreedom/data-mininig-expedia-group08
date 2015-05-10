@@ -64,6 +64,55 @@ create_prob_col <- function(d) {
     return(d)
 }
 
+uinque_id_iter <- function(unique_ids) {
+    count <- length(unique_ids)
+    i <- 0L
+    nextEl <- function() {
+        if (i < count) 
+            unique_ids[i <<- i + 1L]
+        else stop("StopIteration", call. = FALSE)
+    }
+    it <- list(nextElem = nextEl)
+    class(it) <- c("abstractiter", "iter")
+    it
+
+}
+
+test_parallel <- function() { 
+
+    cicle <- 1:1e5
+    a <- foreach(i = uinque_id_iter(1:1e5), .combine='c') %dopar% {
+        b <- rnorm(1e6) + i
+        b <- summary(b)[3]
+        b
+    }
+    return(a)
+}
+
+
+create_prob_pos_col <- function(d) {
+    library(foreach)
+    library(doParallel)
+    
+    #cl <- makeCluster(8)
+    #registerDoParallel(cl)
+    registerDoParallel(cores=8)
+    
+    booked_prob_pos <- c()
+    
+    booked_prob_pos <- foreach(id = uinque_id_iter(unique(d$srch_id)), .combine='c') %dopar% {
+        print(paste("now at",id))
+        
+        return(order(d$booked_prob[d$srch_id == id], decreasing=T))
+    }
+    
+    #stopCluster(cl)
+    
+    d$booked_prob_pos <- booked_prob_pos
+    
+    return(d)
+}
+
 create_competitors_columns <- function(dataset) {
     
     comp_rate_columns <- cbind(
