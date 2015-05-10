@@ -19,29 +19,49 @@ parseDateFromString <- function(date_string) {
 ##     P(booked/clicked) [= 0.6237183]
 ##  - else the probability is P(booked/position)
 ##
-create_prob_col <- function(dataset) {
-    dataset$booked_prob <- 0;
+create_prob_col <- function(d) {
+    d$booked_prob <- 0;
     
+    ##############
+    ## POSITION ##
+    ##############
     # this line has problems with the minified dataset
     prob_known_position <- table(d$position[d$booking_bool]) / table(d$position)
     
     # cheating
-    prob_known_position[35:40] <- prob_known_position[35]
+    prob_known_position[35:length(prob_known_position)] <- prob_known_position[35]
     
     # giving a probability for the position
-    for (p in prob_known_position) {
+    for (i in 1:length(prob_known_position)){
+        p <- prob_known_position[i]
         position <- as.numeric(names(p))
-        dataset$booked_prob[dataset$position == position] <- p
+        d$booked_prob[d$position == position] <- p
     }
     
-    # overwriting who has the click flag
-    p <- sum(d$click_bool[d$booking_bool]) / sum(d$click_bool)
-    dataset$booked_prob[dataset$click_bool] <- p
     
+    ##########################
+    ## POSITION AND CLICKED ##
+    ##########################
+    # this line has problems with the minified dataset (for clicked)
+    prob_known_position <- table(d$position[d$booking_bool]) / table(d$position[d$click_bool])
+    
+    # cheating again
+    prob_known_position[35:length(prob_known_position)] <- prob_known_position[35]
+    
+    # giving a probability for the position for clicked
+    for (i in 1:length(prob_known_position)){
+        p <- prob_known_position[i]
+        position <- as.numeric(names(p))
+        d$booked_prob[d$click_bool & (d$position == position)] <- p
+    }
+    
+    ############
+    ## BOOKED ##
+    ############
     # overwriting who has the booking flag
-    dataset$booked_prob[dataset$booking_bool] <- 1
+    d$booked_prob[d$booking_bool] <- 1
     
-    return(dataset)
+    return(d)
 }
 
 create_competitors_columns <- function(dataset) {
