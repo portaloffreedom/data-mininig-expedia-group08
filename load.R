@@ -11,6 +11,39 @@ parseDateFromString <- function(date_string) {
     return(date)
 }
 
+##
+## Create the column of the probability of beeing booked.
+## The columns is calculated this way:
+##  - if the booking flag is present, then the probability is 1
+##  - else, if the clicking flag is present, then the probabilty is
+##     P(booked/clicked) [= 0.6237183]
+##  - else the probability is P(booked/position)
+##
+create_prob_col <- function(dataset) {
+    dataset$booked_prob <- 0;
+    
+    # this line has problems with the minified dataset
+    prob_known_position <- table(d$position[d$booking_bool]) / table(d$position)
+    
+    # cheating
+    prob_known_position[35:40] <- prob_known_position[35]
+    
+    # giving a probability for the position
+    for (p in prob_known_position) {
+        position <- as.numeric(names(p))
+        dataset$booked_prob[dataset$position == position] <- p
+    }
+    
+    # overwriting who has the click flag
+    p <- sum(d$click_bool[d$booking_bool]) / sum(d$click_bool)
+    dataset$booked_prob[dataset$click_bool] <- p
+    
+    # overwriting who has the booking flag
+    dataset$booked_prob[dataset$booking_bool] <- 1
+    
+    return(dataset)
+}
+
 create_competitors_columns <- function(dataset) {
     
     comp_rate_columns <- cbind(
