@@ -64,8 +64,34 @@ loadData <- function(filename = "train_min.csv", minified = TRUE) {
   dataset$click_bool <- ifelse(dataset$click_bool == 1, TRUE, FALSE)
   # parse booking_bool
   dataset$booking_bool <- ifelse(dataset$booking_bool == 1, TRUE, FALSE)
+  # parse promotion_flag
+  dataset$promotion_flag <- ifelse(dataset$promotion_flag == 1, TRUE, FALSE)
+  # parse prop_brand_bool
+  dataset$prop_brand_bool <- ifelse(dataset$prop_brand_bool == 1, TRUE, FALSE)
   
+  ## FACTORS
+  # parse prop_review_score
+  dataset$prop_review_score <- as.factor(dataset$prop_review_score)
 
   
   return(dataset)
+}
+
+check_sorting_in_srch_id <- function(d) {
+    tot <- 0;
+    print(paste("max: ",max(d$srch_id)))
+    
+    for (id in unique(d$srch_id)) {
+        print(paste("now at",id, "(tot = ",tot,")"))
+        #selection <- d[d$srch_id == id,]
+        #print("done counting")
+        
+        count <- sum(d$random_bool[d$srch_id == id])
+        #print("done sum")
+        if (count != 0 && count != sum(d$srch_id == id)) {
+            tot <- tot+1
+        }
+    }
+    
+    return(tot)
 }
