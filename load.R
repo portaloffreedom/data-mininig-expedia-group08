@@ -227,7 +227,7 @@ keep_only_needed <- function(data) {
         "season"
     )]
     
-    normalize <- function(column) column/max(column)
+    normalize <- function(column) column/max(column, na.rm=T)
     
     data$prop_starrating <- normalize(data$prop_starrating)
     data$prop_review_score <- normalize(data$prop_review_score)
@@ -241,6 +241,10 @@ keep_only_needed <- function(data) {
     data$srch_room_count <- normalize(data$srch_room_count)
     
     data$orig_destination_distance <- normalize(data$orig_destination_distance)
+    
+    data$n_comp <- normalize(data$n_comp)
+    data$n_comp_cheaper <- normalize(data$n_comp_cheaper)
+    data$n_comp_expensive <- normalize(data$n_comp_expensive)
     
     return(data)
 }
