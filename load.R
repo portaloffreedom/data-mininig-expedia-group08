@@ -179,6 +179,14 @@ loadData <- function(filename = "train_min.csv", minified = TRUE) {
   return(dataset)
 }
 
+create_seasons <- function(train){
+  return(
+    as.numeric(gsub('....-(..)-..*',"\\1",train$date_time))
+#     levels = 1:12,
+#     labels = c("Jan","Feb","Mar","Apr","May","June","July","August","September","October","November","December"))
+  )
+}
+
 check_sorting_in_srch_id <- function(d) {
     tot <- 0;
     print(paste("max: ",max(d$srch_id)))
