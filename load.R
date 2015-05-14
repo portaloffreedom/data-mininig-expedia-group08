@@ -187,6 +187,50 @@ create_seasons <- function(train){
   )
 }
 
+keep_only_needed <- function(data) {
+    data <- data[, c(
+        "srch_id",
+        "date_time",
+#         "site_id",
+        "visitor_location_country_id"
+#         "visitor_hist_starrating",
+#         "visitor_hist_adr_usd",
+        "prop_country_id",
+#         "prop_id",
+        "prop_starrating",
+        "prop_review_score",
+        "prop_brand_bool",
+        "prop_location_score1",
+#         "prop_location_score2",
+        "prop_log_historical_price",
+#         "position",
+#         "price_usd",
+        "promotion_flag",
+        "srch_destination_id",
+        "srch_length_of_stay",
+        "srch_booking_window",
+        "srch_adults_count",
+        "srch_children_count",
+        "srch_room_count",
+        "srch_saturday_night_bool",
+#         "srch_query_affinity_score",
+        "orig_destination_distance",
+#         "random_bool",
+#         "click_bool",
+#         "gross_bookings_usd",
+#         "booking_bool",
+        "booked_prob",
+        "n_comp",
+        "n_comp_cheaper",
+        "n_comp_expensive",
+        "booked_prob_pos",
+        "season"
+    )]
+    
+    
+    return(data)
+}
+
 check_sorting_in_srch_id <- function(d) {
     tot <- 0;
     print(paste("max: ",max(d$srch_id)))
