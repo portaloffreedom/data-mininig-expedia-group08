@@ -201,7 +201,7 @@ keep_only_needed <- function(data) {
         "prop_review_score",
         "prop_brand_bool",
         "prop_location_score1",
-#         "prop_location_score2",
+        "prop_location_score2",
         "prop_log_historical_price",
 #         "position",
 #         "price_usd",
@@ -227,6 +227,20 @@ keep_only_needed <- function(data) {
         "season"
     )]
     
+    normalize <- function(column) column/max(column)
+    
+    data$prop_starrating <- normalize(data$prop_starrating)
+    data$prop_review_score <- normalize(data$prop_review_score)
+    data$prop_location_score1 <- normalize(data$prop_location_score1)
+    data$prop_location_score2 <- normalize(data$prop_location_score2)
+    
+    data$srch_length_of_stay <- normalize(data$srch_length_of_stay)
+    data$srch_booking_window <- normalize(data$srch_booking_window)
+    data$srch_adults_count <- normalize(data$srch_adults_count)
+    data$srch_children_count <- normalize(data$srch_children_count)
+    data$srch_room_count <- normalize(data$srch_room_count)
+    
+    data$orig_destination_distance <- normalize(data$orig_destination_distance)
     
     return(data)
 }
