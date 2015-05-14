@@ -192,7 +192,7 @@ keep_only_needed <- function(data) {
         "srch_id",
         "date_time",
 #         "site_id",
-        "visitor_location_country_id"
+        "visitor_location_country_id",
 #         "visitor_hist_starrating",
 #         "visitor_hist_adr_usd",
         "prop_country_id",
