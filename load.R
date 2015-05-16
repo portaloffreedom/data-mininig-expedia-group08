@@ -259,6 +259,8 @@ fill_missing_values <- function(d) {
     d$orig_destination_distance <- fill_NA_with_median(d$orig_destination_distance)
     d$prop_review_score <- fill_NA_with_median(d$prop_review_score)
     d$prop_location_score2 <- fill_NA_with_median(d$prop_location_score2)
+    
+    return(d)
 }
 
 check_sorting_in_srch_id <- function(d) {
