@@ -179,6 +179,10 @@ loadData <- function(filename = "train_min.csv", minified = TRUE) {
   return(dataset)
 }
 
+parse_bool_col <- function(col) {
+    ifelse(col == 1, TRUE, FALSE)
+}
+
 create_seasons <- function(train){
   return(
     as.numeric(gsub('....-(..)-..*',"\\1",train$date_time))
@@ -196,7 +200,7 @@ keep_only_needed <- function(data) {
 #         "visitor_hist_starrating",
 #         "visitor_hist_adr_usd",
         "prop_country_id",
-#         "prop_id",
+        "prop_id",
         "prop_starrating",
         "prop_review_score",
         "prop_brand_bool",
