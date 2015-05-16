@@ -249,6 +249,18 @@ keep_only_needed <- function(data) {
     return(data)
 }
 
+fill_missing_values <- function(d) {
+    #orig_destination_distance
+    fill_NA_with_median <- function(column) {
+        column[is.na(column)] <- median(column, na.rm=T)
+        return(column)
+    }
+    
+    d$orig_destination_distance <- fill_NA_with_median(d$orig_destination_distance)
+    d$prop_review_score <- fill_NA_with_median(d$prop_review_score)
+    d$prop_location_score2 <- fill_NA_with_median(d$prop_location_score2)
+}
+
 check_sorting_in_srch_id <- function(d) {
     tot <- 0;
     print(paste("max: ",max(d$srch_id)))
