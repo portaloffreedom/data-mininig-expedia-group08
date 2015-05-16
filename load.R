@@ -263,6 +263,24 @@ fill_missing_values <- function(d) {
     return(d)
 }
 
+refactor_some_columns <- function(d) {
+    
+    r_exp <- function(column) {
+        c_exp <- 2^column
+        c_exp/max(c_exp,na.rm=T)
+    }
+    
+    d$prop_review_score <- r_exp(d$prop_review_score)
+    
+    historicalPrice = d$prop_log_historical_price
+    historicalPrice[historicalPrice == 0] = median(historicalPrice[historicalPrice != 0])
+    historicalPrice = historicalPrice -  mean(historicalPrice)
+    historicalPrice = historicalPrice /  sd(historicalPrice)
+    d$prop_log_historical_price = historicalPrice
+    
+    return(d)
+}
+
 check_sorting_in_srch_id <- function(d) {
     tot <- 0;
     print(paste("max: ",max(d$srch_id)))

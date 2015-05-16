@@ -23,11 +23,28 @@ calculate_error_for_id <- function(srch_id, booked_prob, real_booked_prob) {
     registerDoParallel(cores=N_CORES)
     
     errors <- foreach(id = uinque_id_iter(unique(srch_id)), .combine='c') %dopar% {
-        print(paste("now at",id))
+#         print(paste("now at",id))
         
         real_prob_order <- order(real_booked_prob[srch_id == id], decreasing=T)
         prob_order <- order(order(booked_prob[srch_id == id], decreasing=F))
-        return(1-ndcg(prob_order[real_prob_order]));
+        return((1-ndcg(prob_order[real_prob_order]))^2);
+    }
+    
+    return(errors)
+}
+
+calculate_error_random <- function(srch_id, real_booked_prob) {
+    
+    registerDoParallel(cores=N_CORES)
+    
+    errors <- foreach(id = uinque_id_iter(unique(srch_id)), .combine='c') %dopar% {
+#         print(paste("now at",id))
+
+        random_values <- runif(sum(srch_id == id), 0, 1)
+        
+        real_prob_order <- order(real_booked_prob[srch_id == id], decreasing=T)
+        prob_order <- order(order(random_values, decreasing=F))
+        return((1-ndcg(prob_order[real_prob_order]))^2);
     }
     
     return(errors)
@@ -77,13 +94,21 @@ analyze <- function(data, train_fn, fwd_fn) {
   
   error_train <- numeric(cross_sections)
   error_test <- numeric(cross_sections)
+  error_random <- numeric(cross_sections)
   
-  interesing_columns <- c('visitor_location_country_id', 'prop_starrating', 'prop_location_score1', 'prop_review_score')
+  interesing_columns <- c(
+#     'visitor_location_country_id',
+    'prop_starrating',
+    'prop_location_score1',
+    'prop_location_score2',
+    'prop_review_score'
+  )
   
   print("A0")  
-  cross_selection <- create_selection_ids(d$srch_id, unique_ids, crossSelectionIds)
+  cross_selection <- create_selection_ids(data$srch_id, unique_ids, crossSelectionIds)
     
   for (i in 1:cross_sections) {
+      print(paste("cross_section:", i))
 #     print("A0")
 #     ## creating selection for ids
 #     selection <- crossSelectionIds == i
@@ -143,15 +168,18 @@ analyze <- function(data, train_fn, fwd_fn) {
     print("E")
     ## calculate positions
     errors_train <- calculate_error_for_id(data$srch_id[train_selection], result_train, data$booked_prob[train_selection])
-    errors_test <- calculate_error_for_id(data$srch_id[!train_selection], result_test, data$booked_prob[train_selection])
+    errors_test <- calculate_error_for_id(data$srch_id[!train_selection], result_test, data$booked_prob[!train_selection])
+    errors_random <- calculate_error_random(data$srch_id[!train_selection], data$booked_prob[!train_selection])
     
     print("F")
     ## error calculation
-    error_train[i] <- mean(errors_train)
-    error_test[i] <- mean(errors_test)
+    error_train[i] <- mean(errors_train, na.rm=T)
+    error_test[i] <- mean(errors_test, na.rm=T)
+    error_random[i] <- mean(errors_random, na.rm=T)
+    print(c(error_train[i], error_test[i], error_random[i]))
   }
   
-  error = c(mean(error_train), mean(error_test))
+  error = c(mean(error_train, na.rm=T), mean(error_test, na.rm=T),  mean(error_random, na.rm=T))
   print(error)
   
   return(error)
@@ -177,7 +205,7 @@ mlp_analyze <- function(data) {
                          size=i,                          #number of neurons in the hidden layer
                          learnFunc="Std_Backpropagation", #type of learning
 #                        learnFuncParams=c(0.01),         #paramenters of the learning function (eta)
-                         maxit=10                        #maximum number of iterations
+                         maxit=100                        #maximum number of iterations
                          )
                                
             print(paste("C2",i))                         
