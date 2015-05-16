@@ -38,7 +38,7 @@ interesing_columns <- c(
 )
 
 
-
+start.time <- Sys.time()
 
 print("A")
 ## creating train and test dataset
@@ -99,3 +99,7 @@ final_order <- calculate_order(test$srch_id, test$prop_id, result_test)
 print("F")
 ## writing file
 write.csv(final_order, "final_order.csv", row.names=F)
+
+end.time <- Sys.time()
+time.taken <- end.time - start.time
+print(paste("tame taken:",time.taken))
