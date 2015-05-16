@@ -1,4 +1,4 @@
-N_CORES <- 2
+N_CORES <- 3
 library(foreach)
 library(doParallel)
 
@@ -166,7 +166,7 @@ analyze <- function(data, train_fn, fwd_fn) {
     result_test <- fwd_fn(model, test)
     
     print("E")
-    ## calculate positions
+    ## calculate positions errors
     errors_train <- calculate_error_for_id(data$srch_id[train_selection], result_train, data$booked_prob[train_selection])
     errors_test <- calculate_error_for_id(data$srch_id[!train_selection], result_test, data$booked_prob[!train_selection])
     errors_random <- calculate_error_random(data$srch_id[!train_selection], data$booked_prob[!train_selection])
@@ -196,7 +196,7 @@ mlp_analyze <- function(data) {
         return(predict_data)
     }
 
-    i_values <- 2:2
+    i_values <- 2:4
     for (i in i_values) {
         train <- function(train_data, target){
             print(paste("C1",i))
@@ -219,4 +219,7 @@ mlp_analyze <- function(data) {
     plot(c(min(i_values),max(i_values)), c(min(errors), max(errors)) ,type="n")
     lines(i_values, errors[,1], col="black")
     lines(i_values, errors[,2], col="red")
+    lines(i_values, errors[,3], col="green")
+    
+    return(errors)
 }
