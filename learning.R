@@ -86,6 +86,41 @@ create_selection_ids <- function(srch_ids, unique_ids, crossSelection) {
   return(selection_ids)
 }
 
+normalize_price <- function(srch_ids, price) {
+  id_index <- 1
+  unique_id_index <- 1
+
+  rows <- length(srch_ids)
+  price_norm <- numeric(rows)
+
+  for (selected_id in sort(unique(srch_ids))) {
+    #find id
+    while (srch_ids[id_index] != selected_id) {
+        id_index <- id_index + 1
+        if (id_index > rows)
+            return(selection_ids)
+    }
+    
+    #find finish_id
+    finish_id <- id_index
+    while (srch_ids[finish_id] == selected_id) {
+        finish_id <- finish_id + 1
+        if (finish_id > rows)
+            break;
+    }
+    finish_id <- finish_id - 1
+    
+    # normalize the block
+    price_block <- price[id_index:finish_id] 
+    price_block <- price_block - min(price_block)
+    price_norm[id_index:finish_id] <- price_block / max(price_block)
+    
+    unique_id_index <- unique_id_index +1
+  }
+
+  return(price_norm)
+}
+
 analyze <- function(data, train_fn, fwd_fn) {
   
   cross_sections <- 10
@@ -99,9 +134,25 @@ analyze <- function(data, train_fn, fwd_fn) {
   interesing_columns <- c(
 #     'visitor_location_country_id',
     'prop_starrating',
-    'prop_location_score1',
+#     'prop_location_score1',
     'prop_location_score2',
-    'prop_review_score'
+    'prop_review_score',
+    'price_usd',
+#     'n_comp_cheaper',
+#     'n_comp_expensive',
+#     'season',
+#     's1',
+#     's2',
+#     's3',
+#     's4',
+#     's5',
+#     's6',
+#     's11',
+#     's12',
+#     'srch_adults_count',
+#     'srch_children_count',
+    'promotion_flag'
+#     'prop_brand_bool'
   )
   
   print("A0")  
@@ -185,6 +236,22 @@ analyze <- function(data, train_fn, fwd_fn) {
   return(error)
 }
 
+add_season_vector <- function(d) {
+ d$s1 <- ifelse(d$season == 1, T, F)
+ d$s2 <- ifelse(d$season == 2, T, F)
+ d$s3 <- ifelse(d$season == 3, T, F)
+ d$s4 <- ifelse(d$season == 4, T, F)
+ d$s5 <- ifelse(d$season == 5, T, F)
+ d$s6 <- ifelse(d$season == 6, T, F)
+ # 7 to 10 missing
+ d$s11 <- ifelse(d$season == 11, T, F)
+ d$s12 <- ifelse(d$season == 12, T, F)
+ 
+ return(d)
+}
+
+
+
 mlp_analyze <- function(data) {
     library("RSNNS")
     
@@ -196,7 +263,7 @@ mlp_analyze <- function(data) {
         return(predict_data)
     }
 
-    i_values <- 2:4
+    i_values <- 2:5
     for (i in i_values) {
         train <- function(train_data, target){
             print(paste("C1",i))
@@ -216,10 +283,10 @@ mlp_analyze <- function(data) {
         errors <- rbind(errors, error)
     }
     
-    plot(c(min(i_values),max(i_values)), c(min(errors), max(errors)) ,type="n")
+    plot(c(min(i_values),max(i_values)), c(min(errors), max(errors[,1:2])) ,type="n")
     lines(i_values, errors[,1], col="black")
     lines(i_values, errors[,2], col="red")
-    lines(i_values, errors[,3], col="green")
+#     lines(i_values, errors[,3], col="green")
     
     return(errors)
 }
