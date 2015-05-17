@@ -113,7 +113,16 @@ normalize_price <- function(srch_ids, price) {
     # normalize the block
     price_block <- price[id_index:finish_id] 
     price_block <- price_block - min(price_block)
-    price_norm[id_index:finish_id] <- price_block / max(price_block)
+    price_block[is.na(price_block)] <- median(price_block, na.rm=T)
+    max_price <- max(price_block, na.rm=T)
+    
+    if (max_price != 0) {
+        price_block <- price_block / max(price_block, na.rm=T)
+    } else {
+        price_block <- .3
+    }
+    
+    price_norm[id_index:finish_id] <- price_block
     
     unique_id_index <- unique_id_index +1
   }
