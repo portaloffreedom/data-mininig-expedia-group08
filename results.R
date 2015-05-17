@@ -18,11 +18,15 @@ fwd_fn=function(model, data){
   return(predict_data)
 }
 
-calculate_order <- function(srch_id, prop_id, result) {
+calculate_order <- function(srch_id, prop_id, model, test_x) {
+    
+    registerDoParallel(cores=3)    
     
     foreach(id = uinque_id_iter(unique(srch_id)), .combine='rbind') %dopar% {
         
-        real_prob_order <- order(result[srch_id == id], decreasing=T)
+        result <- fwd_fn(model, test_x[srch_id == id,])
+        
+        real_prob_order <- order(result, decreasing=T)
         prop_id_sort <- prop_id[real_prob_order]
         
         cbind(id, prop_id_sort)
@@ -44,7 +48,7 @@ start.time <- Sys.time()
 
 print("A")
 ## creating train and test dataset
-train <- read.csv("train_full_expanded_v4.csv")
+train <- read.csv("train_full_expanded_v4.csv")[1:40007,]
 print("A1")
 test <- read.csv("test_set_VU_DM_2014.csv", na.strings = "NULL")
 
@@ -93,11 +97,16 @@ model <- train_fn(train_x, target_train)
 print("D")
 ## results
 # result_train <- fwd_fn(model, train)
-result_test <- fwd_fn(model, test_x)
+# result_test <- fwd_fn(model, test_x)
+
+# result_test <- foreach(id = uinque_id_iter(unique(srch_id)), .combine='c') %dopar% { 
+#     fwd_fn(model, test_x[srch_id == id])
+# }
+
 
 print("E")
 ## calculate positions
-final_order <- calculate_order(test$srch_id, test$prop_id, result_test)
+final_order <- calculate_order(test$srch_id, test$prop_id, model, test_x)
 
 print("F")
 ## writing file
