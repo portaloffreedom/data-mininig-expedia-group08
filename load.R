@@ -208,7 +208,7 @@ keep_only_needed <- function(data) {
         "prop_location_score2",
         "prop_log_historical_price",
 #         "position",
-#         "price_usd",
+        "price_usd",
         "promotion_flag",
         "srch_destination_id",
         "srch_length_of_stay",
