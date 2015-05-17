@@ -32,9 +32,11 @@ calculate_order <- function(srch_id, prop_id, result) {
 interesing_columns <- c(
 #     'visitor_location_country_id',
     'prop_starrating',
-    'prop_location_score1',
+#     'prop_location_score1',
     'prop_location_score2',
-    'prop_review_score'
+    'prop_review_score',
+    'price_usd',
+    'promotion_flag'
 )
 
 
@@ -42,9 +44,9 @@ start.time <- Sys.time()
 
 print("A")
 ## creating train and test dataset
-train <- read.csv("train_full_expanded_v3.csv")
+train <- read.csv("train_full_expanded_v4.csv")
 print("A1")
-test <- read.csv("test_set_VU_DM_2014.csv")
+test <- read.csv("test_set_VU_DM_2014.csv", na.strings = "NULL")
 
 print("A2")
 ## "test" set normalization
@@ -60,6 +62,7 @@ print("A2")
 test <- keep_only_needed(test)
 test <- fill_missing_values(test)
 test <- refactor_some_columns(test)
+test$price_usd <- normalize_price(test$srch_id, test$price_usd) 
 
 print("B")
 ## creating targets
