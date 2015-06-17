@@ -218,17 +218,17 @@ keep_only_needed <- function(data) {
         "srch_room_count",
         "srch_saturday_night_bool",
 #         "srch_query_affinity_score",
-        "orig_destination_distance",
+        "orig_destination_distance"
 #         "random_bool",
 #         "click_bool",
 #         "gross_bookings_usd",
 #         "booking_bool",
-        "booked_prob",
-        "n_comp",
-        "n_comp_cheaper",
-        "n_comp_expensive",
-        "booked_prob_pos",
-        "season"
+#         "booked_prob",
+#         "n_comp",
+#         "n_comp_cheaper",
+#         "n_comp_expensive",
+#         "booked_prob_pos",
+#         "season"
     )]
     
     normalize <- function(column) column/max(column, na.rm=T)
@@ -246,9 +246,9 @@ keep_only_needed <- function(data) {
     
     data$orig_destination_distance <- normalize(data$orig_destination_distance)
     
-    data$n_comp <- normalize(data$n_comp)
-    data$n_comp_cheaper <- normalize(data$n_comp_cheaper)
-    data$n_comp_expensive <- normalize(data$n_comp_expensive)
+#     data$n_comp <- normalize(data$n_comp)
+#     data$n_comp_cheaper <- normalize(data$n_comp_cheaper)
+#     data$n_comp_expensive <- normalize(data$n_comp_expensive)
     
     return(data)
 }

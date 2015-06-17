@@ -2,15 +2,19 @@ N_CORES <- 3
 library(foreach)
 library(doParallel)
 
+source("load.R")
+library("RSNNS")
 
+DCG <- function(y) y[1] + sum(y[-1]/log(2:length(y), base=2))
 ndcg <- function(x) {
     # x is a vector of relevance scores
     ideal_x <- sort(x, decreasing=T)
-    DCG <- function(y) y[1] + sum(y[-1]/log(2:length(y), base=2))
+    #print(x)
+    #print(ideal_x)
+    #print(paste("results:",DCG(x),DCG(ideal_x),DCG(x)/DCG(ideal_x)))
     
     DCG(x)/DCG(ideal_x)
 }
-source("load.R")
 
 summed_squared_difference <- function(result,target) {
   difference <- result-target
@@ -18,33 +22,35 @@ summed_squared_difference <- function(result,target) {
   #return(mean(abs(difference)))
 }
 
-calculate_error_for_id <- function(srch_id, booked_prob, real_booked_prob) {
+calculate_error_for_id <- function(srch_id, booked_prob, real_booked_prob, ndcg_target) {
     
     registerDoParallel(cores=N_CORES)
     
     errors <- foreach(id = uinque_id_iter(unique(srch_id)), .combine='c') %dopar% {
 #         print(paste("now at",id))
+        selection <- srch_id == id
         
-        real_prob_order <- order(real_booked_prob[srch_id == id], decreasing=T)
-        prob_order <- order(order(booked_prob[srch_id == id], decreasing=F))
-        return((1-ndcg(prob_order[real_prob_order]))^2);
+        #real_prob_order <- order(real_booked_prob[selection], decreasing=T)
+        prob_order <- ndcg_target[selection][order(booked_prob[selection], decreasing=F)]
+        return((ndcg(prob_order)));
     }
     
     return(errors)
 }
 
-calculate_error_random <- function(srch_id, real_booked_prob) {
+calculate_error_random <- function(srch_id, real_booked_prob, ndcg_target) {
     
     registerDoParallel(cores=N_CORES)
     
     errors <- foreach(id = uinque_id_iter(unique(srch_id)), .combine='c') %dopar% {
 #         print(paste("now at",id))
+        selection <- srch_id == id
 
-        random_values <- runif(sum(srch_id == id), 0, 1)
+        random_values <- runif(sum(selection), 0, 1)
         
-        real_prob_order <- order(real_booked_prob[srch_id == id], decreasing=T)
-        prob_order <- order(order(random_values, decreasing=F))
-        return((1-ndcg(prob_order[real_prob_order]))^2);
+        #real_prob_order <- order(real_booked_prob[selection], decreasing=T)
+        prob_order <- ndcg_target[selection][order(random_values, decreasing=F)]
+        return((ndcg(prob_order)));
     }
     
     return(errors)
@@ -141,27 +147,27 @@ analyze <- function(data, train_fn, fwd_fn) {
   error_random <- numeric(cross_sections)
   
   interesing_columns <- c(
-#     'visitor_location_country_id',
+#    'visitor_location_country_id',
     'prop_starrating',
-#     'prop_location_score1',
+    'prop_location_score1',
     'prop_location_score2',
     'prop_review_score',
     'price_usd',
-#     'n_comp_cheaper',
-#     'n_comp_expensive',
-#     'season',
-#     's1',
-#     's2',
-#     's3',
-#     's4',
-#     's5',
-#     's6',
-#     's11',
-#     's12',
-#     'srch_adults_count',
-#     'srch_children_count',
-    'promotion_flag'
-#     'prop_brand_bool'
+    'n_comp_cheaper',
+    'n_comp_expensive',
+#    'season',
+    's1',
+    's2',
+    's3',
+    's4',
+    's5',
+    's6',
+    's11',
+    's12',
+    'srch_adults_count',
+    'srch_children_count',
+    'promotion_flag',
+    'prop_brand_bool'
   )
   
   print("A0")  
@@ -200,6 +206,17 @@ analyze <- function(data, train_fn, fwd_fn) {
     train <- data[train_selection,interesing_columns]
     test <- data[!train_selection,interesing_columns]
     
+    print(paste("size of train:",nrow(train),ncol(train)))
+    
+    train_5 <- data[data$ndcg_target == 5 & train_selection, interesing_columns]
+    train_1 <- data[data$ndcg_target == 1 & train_selection, interesing_columns]
+    train_0 <- data[data$ndcg_target == 0 & train_selection, interesing_columns][nrow(train_1),]
+    
+    train <- rbind(train_5,train_1,train_0)
+    
+    print(paste("size of train:",nrow(train),ncol(train)))
+    
+    
     # test if the sets are empty
     if (nrow(train) == 0) stop("train set is empty")
     if (nrow(test) == 0) stop("test set is empty")
@@ -214,6 +231,13 @@ analyze <- function(data, train_fn, fwd_fn) {
     target_train <- data$booked_prob[train_selection]
     #target_test <- data$booked_prob[!train_selection]
     
+    
+    target_train_5 <- data$booked_prob[data$ndcg_target == 5 & train_selection]
+    target_train_1 <- data$booked_prob[data$ndcg_target == 1 & train_selection]
+    target_train_0 <- data$booked_prob[data$ndcg_target == 0 & train_selection][nrow(train_1)]
+    
+    target_train <- c(target_train_5,target_train_1,target_train_0)
+    
     if (sum(is.na(target_train)) != 0) stop("target_train set has NA")
     
     print("C")
@@ -227,9 +251,9 @@ analyze <- function(data, train_fn, fwd_fn) {
     
     print("E")
     ## calculate positions errors
-    errors_train <- calculate_error_for_id(data$srch_id[train_selection], result_train, data$booked_prob[train_selection])
-    errors_test <- calculate_error_for_id(data$srch_id[!train_selection], result_test, data$booked_prob[!train_selection])
-    errors_random <- calculate_error_random(data$srch_id[!train_selection], data$booked_prob[!train_selection])
+    errors_train <- calculate_error_for_id(data$srch_id[train_selection], result_train, data$booked_prob[train_selection], data$ndcg_target[train_selection])
+    errors_test <- calculate_error_for_id(data$srch_id[!train_selection], result_test, data$booked_prob[!train_selection], data$ndcg_target[!train_selection])
+    errors_random <- calculate_error_random(data$srch_id[!train_selection], data$booked_prob[!train_selection], data$ndcg_target[!train_selection])
     
     print("F")
     ## error calculation
@@ -260,9 +284,16 @@ add_season_vector <- function(d) {
 }
 
 
+load_mini_test_data <- function() {
+    nlines <- 40007 #4005
+
+    train <- read.csv("train_full_expanded_v4.csv")[1:nlines,]
+    train$ndcg_target <- read.table("ndcg_target.txt")[1:nlines,]
+    
+    train
+}
 
 mlp_analyze <- function(data) {
-    library("RSNNS")
     
     errors<-c()
     
@@ -272,7 +303,7 @@ mlp_analyze <- function(data) {
         return(predict_data)
     }
 
-    i_values <- 2:5
+    i_values <- 2:15
     for (i in i_values) {
         train <- function(train_data, target){
             print(paste("C1",i))

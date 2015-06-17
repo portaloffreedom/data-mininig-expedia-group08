@@ -49,6 +49,7 @@ start.time <- Sys.time()
 print("A")
 ## creating train and test dataset
 train <- read.csv("train_full_expanded_v4.csv")[1:40007,]
+train$ndcg_target <- read.table("ndcg_target.txt")[1:40007,]
 print("A1")
 test <- read.csv("test_set_VU_DM_2014.csv", na.strings = "NULL")
 
