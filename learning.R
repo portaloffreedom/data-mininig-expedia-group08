@@ -3,14 +3,13 @@ library(foreach)
 library(doParallel)
 
 source("load.R")
-library("RSNNS")
+library(nnet)
 
 DCG <- function(y) y[1] + sum(y[-1]/log(2:length(y), base=2))
 ndcg <- function(x) {
     # x is a vector of relevance scores
     ideal_x <- sort(x, decreasing=T)
-    #print(x)
-    #print(ideal_x)
+    #print(rbind(ideal_x,x))
     #print(paste("results:",DCG(x),DCG(ideal_x),DCG(x)/DCG(ideal_x)))
     
     DCG(x)/DCG(ideal_x)
@@ -31,7 +30,7 @@ calculate_error_for_id <- function(srch_id, booked_prob, real_booked_prob, ndcg_
         selection <- srch_id == id
         
         #real_prob_order <- order(real_booked_prob[selection], decreasing=T)
-        prob_order <- ndcg_target[selection][order(booked_prob[selection], decreasing=F)]
+        prob_order <- ndcg_target[selection][order(booked_prob[selection], decreasing=T)]
         return((ndcg(prob_order)));
     }
     
@@ -49,7 +48,7 @@ calculate_error_random <- function(srch_id, real_booked_prob, ndcg_target) {
         random_values <- runif(sum(selection), 0, 1)
         
         #real_prob_order <- order(real_booked_prob[selection], decreasing=T)
-        prob_order <- ndcg_target[selection][order(random_values, decreasing=F)]
+        prob_order <- ndcg_target[selection][order(random_values, decreasing=T)]
         return((ndcg(prob_order)));
     }
     
@@ -168,6 +167,7 @@ analyze <- function(data, train_fn, fwd_fn) {
     'srch_children_count',
     'promotion_flag',
     'prop_brand_bool'
+#     'booked_prob'
   )
   
   print("A0")  
@@ -208,11 +208,11 @@ analyze <- function(data, train_fn, fwd_fn) {
     
     print(paste("size of train:",nrow(train),ncol(train)))
     
-    train_5 <- data[data$ndcg_target == 5 & train_selection, interesing_columns]
-    train_1 <- data[data$ndcg_target == 1 & train_selection, interesing_columns]
-    train_0 <- data[data$ndcg_target == 0 & train_selection, interesing_columns][nrow(train_1),]
+#     train_5 <- data[data$ndcg_target == 5 & train_selection, interesing_columns]
+#     train_1 <- data[data$ndcg_target == 1 & train_selection, interesing_columns]
+#     train_0 <- data[data$ndcg_target == 0 & train_selection, interesing_columns][nrow(train_1),]
     
-    train <- rbind(train_5,train_1,train_0)
+#     train <- rbind(train_5,train_1,train_0)
     
     print(paste("size of train:",nrow(train),ncol(train)))
     
@@ -229,14 +229,14 @@ analyze <- function(data, train_fn, fwd_fn) {
     print("B")
     ## creating targets
     target_train <- data$booked_prob[train_selection]
-    #target_test <- data$booked_prob[!train_selection]
+    target_test <- data$booked_prob[!train_selection]
     
     
-    target_train_5 <- data$booked_prob[data$ndcg_target == 5 & train_selection]
-    target_train_1 <- data$booked_prob[data$ndcg_target == 1 & train_selection]
-    target_train_0 <- data$booked_prob[data$ndcg_target == 0 & train_selection][nrow(train_1)]
+#     target_train_5 <- data$booked_prob[data$ndcg_target == 5 & train_selection]
+#     target_train_1 <- data$booked_prob[data$ndcg_target == 1 & train_selection]
+#     target_train_0 <- data$booked_prob[data$ndcg_target == 0 & train_selection][nrow(train_1)]
     
-    target_train <- c(target_train_5,target_train_1,target_train_0)
+#     target_train <- c(target_train_5,target_train_1,target_train_0)
     
     if (sum(is.na(target_train)) != 0) stop("target_train set has NA")
     
@@ -249,11 +249,13 @@ analyze <- function(data, train_fn, fwd_fn) {
     result_train <- fwd_fn(model, train)
     result_test <- fwd_fn(model, test)
     
+    #print(cbind(result_train, target_train))
+    
     print("E")
     ## calculate positions errors
-    errors_train <- calculate_error_for_id(data$srch_id[train_selection], result_train, data$booked_prob[train_selection], data$ndcg_target[train_selection])
-    errors_test <- calculate_error_for_id(data$srch_id[!train_selection], result_test, data$booked_prob[!train_selection], data$ndcg_target[!train_selection])
-    errors_random <- calculate_error_random(data$srch_id[!train_selection], data$booked_prob[!train_selection], data$ndcg_target[!train_selection])
+    errors_train <- calculate_error_for_id(data$srch_id[train_selection], result_train, target_train, data$ndcg_target[train_selection])
+    errors_test <- calculate_error_for_id(data$srch_id[!train_selection], result_test, target_test, data$ndcg_target[!train_selection])
+    errors_random <- calculate_error_random(data$srch_id[!train_selection], target_test, data$ndcg_target[!train_selection])
     
     print("F")
     ## error calculation
@@ -315,13 +317,7 @@ mlp_analyze <- function(data) {
     for (i in i_values) {
         train <- function(train_data, target){
             print(paste("C1",i))
-            model <- mlp(x=train_data,                    #input data for training
-                         y=target,                        #output data (targets) for training
-                         size=i,                          #number of neurons in the hidden layer
-                         learnFunc="Std_Backpropagation", #type of learning
-#                        learnFuncParams=c(0.01),         #paramenters of the learning function (eta)
-                         maxit=100                        #maximum number of iterations
-                         )
+            model <- nnet(train_data, target, size = i, rang = 0.1, decay = 5e-4, maxit = 100, trace=T)
                                
             print(paste("C2",i))                         
             return(model)
