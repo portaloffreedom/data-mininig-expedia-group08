@@ -318,7 +318,7 @@ mlp_analyze <- function(data) {
     for (i in i_values) {
         train <- function(train_data, target){
             print(paste("C1",i))
-            model <- nnet(train_data, target, size = i, rang = 0.1, decay = 5e-4, maxit = 100, trace=T)
+            model <- nnet(train_data, target, size = i, rang = 0.1, decay = 5e-3, maxit = 150, trace=T)
                                
             print(paste("C2",i))                         
             return(model)
