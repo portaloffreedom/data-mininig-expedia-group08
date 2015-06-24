@@ -293,6 +293,14 @@ load_mini_test_data <- function() {
     train
 }
 
+load_full_test_data <- function() {
+    train <- read.csv("train_full_expanded_v4.csv")
+    train$ndcg_target <- read.table("ndcg_target.txt")
+    
+    train <- add_season_vector(train)
+    train
+}
+
 mlp_analyze <- function(data) {
     
     errors<-c()
