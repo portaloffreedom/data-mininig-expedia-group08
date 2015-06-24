@@ -1,9 +1,11 @@
-N_CORES <- 3
+N_CORES <- 1
 library(foreach)
 library(doParallel)
+registerDoParallel(cores=N_CORES)
 
 source("load.R")
-library("RSNNS")
+# library("RSNNS")
+library(nnet)
 
 DCG <- function(y) y[1] + sum(y[-1]/log(2:length(y), base=2))
 ndcg <- function(x) {
@@ -147,7 +149,7 @@ analyze <- function(data, train_fn, fwd_fn) {
   error_random <- numeric(cross_sections)
   
   interesing_columns <- c(
-#    'visitor_location_country_id',
+    'visitor_location_country_id',
     'prop_starrating',
     'prop_location_score1',
     'prop_location_score2',
@@ -167,7 +169,8 @@ analyze <- function(data, train_fn, fwd_fn) {
     'srch_adults_count',
     'srch_children_count',
     'promotion_flag',
-    'prop_brand_bool'
+    'prop_brand_bool',
+    'booked_prob'
   )
   
   print("A0")  
@@ -208,11 +211,11 @@ analyze <- function(data, train_fn, fwd_fn) {
     
     print(paste("size of train:",nrow(train),ncol(train)))
     
-    train_5 <- data[data$ndcg_target == 5 & train_selection, interesing_columns]
-    train_1 <- data[data$ndcg_target == 1 & train_selection, interesing_columns]
-    train_0 <- data[data$ndcg_target == 0 & train_selection, interesing_columns][nrow(train_1),]
+#     train_5 <- data[data$ndcg_target == 5 & train_selection, interesing_columns]
+#     train_1 <- data[data$ndcg_target == 1 & train_selection, interesing_columns]
+#     train_0 <- data[data$ndcg_target == 0 & train_selection, interesing_columns][nrow(train_5),]
     
-    train <- rbind(train_5,train_1,train_0)
+#     train <- rbind(train_5,train_1,train_0)
     
     print(paste("size of train:",nrow(train),ncol(train)))
     
@@ -232,11 +235,11 @@ analyze <- function(data, train_fn, fwd_fn) {
     #target_test <- data$booked_prob[!train_selection]
     
     
-    target_train_5 <- data$booked_prob[data$ndcg_target == 5 & train_selection]
-    target_train_1 <- data$booked_prob[data$ndcg_target == 1 & train_selection]
-    target_train_0 <- data$booked_prob[data$ndcg_target == 0 & train_selection][nrow(train_1)]
+#     target_train_5 <- data$booked_prob[data$ndcg_target == 5 & train_selection]
+#     target_train_1 <- data$booked_prob[data$ndcg_target == 1 & train_selection]
+#     target_train_0 <- data$booked_prob[data$ndcg_target == 0 & train_selection][nrow(train_1)]
     
-    target_train <- c(target_train_5,target_train_1,target_train_0)
+#     target_train <- c(target_train_5,target_train_1,target_train_0)
     
     if (sum(is.na(target_train)) != 0) stop("target_train set has NA")
     
@@ -248,6 +251,9 @@ analyze <- function(data, train_fn, fwd_fn) {
     ## results
     result_train <- fwd_fn(model, train)
     result_test <- fwd_fn(model, test)
+    
+    #print(cbind(result_train,target_train))
+    #print(paste("difference:", sum(target_train - train$booked_prob)))
     
     print("E")
     ## calculate positions errors
@@ -290,32 +296,69 @@ load_mini_test_data <- function() {
     train <- read.csv("train_full_expanded_v4.csv")[1:nlines,]
     train$ndcg_target <- read.table("ndcg_target.txt")[1:nlines,]
     
+    train <- add_season_vector(train)
     train
 }
 
 mlp_analyze <- function(data) {
     
     errors<-c()
+    registerDoParallel(cores=N_CORES)
     
     forward <- function(model, data){
         print("D1")
-        predict_data <- predict(model,data)
-        return(predict_data)
+        #for (country_id in unique(data$visitor_location_country_id)) {
+        r <- foreach(country_id = uinque_id_iter(unique(data$visitor_location_country_id)), .combine='rbind') %dopar% {
+            blockSize <- sum(data$visitor_location_country_id == country_id)
+            if (is.null(model[country_id][[1]])) {
+                print(paste("missing country",country_id))
+                return(cbind(rep(0,blockSize),rep(country_id,blockSize)));
+            }
+            cbind(
+                predict(model[[country_id]],data[data$visitor_location_country_id == country_id, (colnames(data) != "visitor_location_country_id")]),
+                country_id
+            )
+        }
+        results <- rep(0,nrow(data))
+        for (country_id in unique(data$visitor_location_country_id)) {
+            if (length(r[r[,2] == country_id,1]) <=0) next;
+            results[data$visitor_location_country_id == country_id] <- r[r[,2] == country_id,1]
+        }
+        #print(cbind(results, r[,1]))
+        results
     }
 
-    i_values <- 2:15
+    i_values <- c(2)#,3,5,10,20,50)
     for (i in i_values) {
+    registerDoParallel(cores=N_CORES)
         train <- function(train_data, target){
             print(paste("C1",i))
-            model <- mlp(x=train_data,                    #input data for training
-                         y=target,                        #output data (targets) for training
-                         size=i,                          #number of neurons in the hidden layer
-                         learnFunc="Std_Backpropagation", #type of learning
-#                        learnFuncParams=c(0.01),         #paramenters of the learning function (eta)
-                         maxit=100                        #maximum number of iterations
-                         )
-                               
-            print(paste("C2",i))                         
+            model <- list()
+            #for (country_id in unique(train_data$visitor_location_country_id)) {
+            models <- foreach(country_id = uinque_id_iter(unique(data$visitor_location_country_id))) %dopar% {
+                input <- train_data[train_data$visitor_location_country_id == country_id,(colnames(train_data) != "visitor_location_country_id")]
+                if (sum(train_data$visitor_location_country_id == country_id) == 0) {
+                    model[[country_id]] <- NULL
+                    return()
+                }
+                nnet(input, target[train_data$visitor_location_country_id == country_id], 
+                        size = i, rang = 0.1, decay = 5e-4, maxit = 100, trace=T)
+#                 mlp(x=input,                   #input data for training
+#                     y=target[train_data$visitor_location_country_id == country_id],                        #output data (targets) for training
+# #                     y=runif(length(target[train_data$visitor_location_country_id == country_id])),                        #output data (targets) for training
+#                     size=i,                    #number of neurons in the hidden layer
+#                     learnFunc="BackpropBatch", #type of learning
+# #                   learnFuncParams=c(0.01),   #paramenters of the learning function (eta)
+#                     maxit=150                 #maximum number of iterations
+#                     )
+                                           
+            }
+            j <- 0
+            for (country_id in unique(data$visitor_location_country_id)) {
+                j <- j+1
+                model[[country_id]] <- models[[j]]
+            }
+            print(paste("C2",i))
             return(model)
         }
         
