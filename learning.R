@@ -255,7 +255,7 @@ analyze <- function(data, train_fn, fwd_fn) {
     ## calculate positions errors
     errors_train <- calculate_error_for_id(data$srch_id[train_selection], result_train, target_train, data$ndcg_target[train_selection])
     errors_test <- calculate_error_for_id(data$srch_id[!train_selection], result_test, target_test, data$ndcg_target[!train_selection])
-    errors_random <- calculate_error_random(data$srch_id[!train_selection], target_test, data$ndcg_target[!train_selection])
+    errors_random <- 0#calculate_error_random(data$srch_id[!train_selection], target_test, data$ndcg_target[!train_selection])
     
     print("F")
     ## error calculation
@@ -292,6 +292,7 @@ load_mini_test_data <- function() {
     train <- read.csv("train_full_expanded_v4.csv")[1:nlines,]
     train$ndcg_target <- read.table("ndcg_target.txt")[1:nlines,]
     
+    train <- add_season_vector(train)
     train
 }
 
@@ -313,7 +314,7 @@ mlp_analyze <- function(data) {
         return(predict_data)
     }
 
-    i_values <- 2:15
+    i_values <- c(2)
     for (i in i_values) {
         train <- function(train_data, target){
             print(paste("C1",i))
@@ -327,7 +328,7 @@ mlp_analyze <- function(data) {
         errors <- rbind(errors, error)
     }
     
-    plot(c(min(i_values),max(i_values)), c(min(errors), max(errors[,1:2])) ,type="n")
+    plot(c(min(i_values),max(i_values)), c(min(errors[,1:2]), max(errors[,1:2])) ,type="n")
     lines(i_values, errors[,1], col="black")
     lines(i_values, errors[,2], col="red")
 #     lines(i_values, errors[,3], col="green")
